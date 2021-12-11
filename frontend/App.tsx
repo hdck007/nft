@@ -1,91 +1,145 @@
 import { HARDHAT_PORT, HARDHAT_PRIVATE_KEY } from '@env';
-import { useWalletConnect } from '@walletconnect/react-native-dapp';
+import { Ionicons } from '@expo/vector-icons';
+import { createMaterialBottomTabNavigator } from '@react-navigation/material-bottom-tabs';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StatusBar } from 'react-native';
+import { Header } from 'react-native-elements';
 import localhost from 'react-native-localhost';
 import Web3 from 'web3';
 
+const Stack = createStackNavigator();
+
 import Hello from '../artifacts/contracts/Hello.sol/Hello.json';
 
-const styles = StyleSheet.create({
-  center: { alignItems: 'center', justifyContent: 'center' },
-  // eslint-disable-next-line react-native/no-color-literals
-  white: { backgroundColor: 'white' },
-});
+import Home from './src/Screens/Home';
+import Profile from './src/Screens/Profile';
 
+const Tab = createMaterialBottomTabNavigator();
+
+// deploying contract on hardhat
 const shouldDeployContract = async (web3, abi, data, from: string) => {
-  const deployment = new web3.eth.Contract(abi).deploy({ data });
-  const gas = await deployment.estimateGas();
-  const {
-    options: { address: contractAddress },
-  } = await deployment.send({ from, gas });
-  return new web3.eth.Contract(abi, contractAddress);
+	const deployment = new web3.eth.Contract(abi).deploy({ data });
+	const gas = await deployment.estimateGas();
+	const {
+		options: { address: contractAddress },
+	} = await deployment.send({ from, gas });
+	return new web3.eth.Contract(abi, contractAddress);
 };
 
 export default function App(): JSX.Element {
-  const connector = useWalletConnect();
-  const [message, setMessage] = React.useState<string>('Loading...');
-  const web3 = React.useMemo(
-    () => new Web3(new Web3.providers.HttpProvider(`http://${localhost}:${HARDHAT_PORT}`)),
-    [HARDHAT_PORT]
-  );
-  
-  React.useEffect(() => {
-    void (async () => {
-      const { address } = await web3.eth.accounts.privateKeyToAccount(HARDHAT_PRIVATE_KEY);
-      const contract = await shouldDeployContract(
-        web3,
-        Hello.abi,
-        Hello.bytecode,
-        address
-      );
-      setMessage(await contract.methods.sayHello('React Native').call());
-    })();
-  }, [web3, shouldDeployContract, setMessage, HARDHAT_PRIVATE_KEY]);
-  
-  const connectWallet = React.useCallback(() => {
-    return connector.connect();
-  }, [connector]);
+	const [message, setMessage] = React.useState<string>('Loading...');
+	const web3 = React.useMemo(
+		() =>
+			new Web3(
+				new Web3.providers.HttpProvider(`http://${localhost}:${HARDHAT_PORT}`)
+			),
+		[HARDHAT_PORT]
+	);
 
-  const signTransaction = React.useCallback(async () => {
-    try {
-       await connector.signTransaction({
-        data: '0x',
-        from: '0xbc28Ea04101F03aA7a94C1379bc3AB32E65e62d3',
-        gas: '0x9c40',
-        gasPrice: '0x02540be400',
-        nonce: '0x0114',
-        to: '0x89D24A7b4cCB1b6fAA2625Fe562bDd9A23260359',
-        value: '0x00',
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  }, [connector]);
+	React.useEffect(() => {
+		void (async () => {
+			const { address } = await web3.eth.accounts.privateKeyToAccount(
+				HARDHAT_PRIVATE_KEY
+			);
+			const contract = await shouldDeployContract(
+				web3,
+				Hello.abi,
+				Hello.bytecode,
+				address
+			);
+			setMessage(await contract.methods.sayHello('React Native').call());
+			console.log('This happens here');
+		})();
+	}, [web3, shouldDeployContract, setMessage, HARDHAT_PRIVATE_KEY]);
 
-  const killSession = React.useCallback(() => {
-    return connector.killSession();
-  }, [connector]);
-
-  return (
-    <View style={[StyleSheet.absoluteFill, styles.center, styles.white]}>
-      {console.log(connector.connected)}
-      <Text testID="tid-message">{message}{}</Text>
-      {Boolean(connector.connected) && (
-        <TouchableOpacity onPress={connectWallet}>
-          <Text>Connect a Wallet</Text>
-        </TouchableOpacity>
-      )}
-      {!!connector.connected && (
-        <>
-          <TouchableOpacity onPress={signTransaction}>
-            <Text>Sign a Transaction</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={killSession}>
-            <Text>Kill Session</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
-  );
+	return (
+		<NavigationContainer>
+			<StatusBar backgroundColor='#3F0071' barStyle='default' />
+			<Stack.Navigator>
+				<Stack.Screen
+					options={{
+						headerBackgroundContainerStyle: {
+							backgroundColor: 'black',
+							borderBottomColor: 'black',
+						},
+						headerStyle: {
+							backgroundColor: 'black',
+							borderBottomColor: 'black',
+						},
+						header: () => (
+							<Header
+								containerStyle={{
+									backgroundColor: '#fff',
+									height: 90,
+									borderBottomColor: '#fff',
+								}}
+								centerComponent={{
+									text: 'Discover',
+									style: { color: '#000', fontSize: 20, fontWeight: '700' },
+								}}
+							/>
+						),
+					}}
+					name='Home'
+					component={MyTab}
+				/>
+				<Stack.Screen name='NFT' component={MyTab} />
+			</Stack.Navigator>
+		</NavigationContainer>
+	);
 }
+
+const MyTab = () => (
+	<Tab.Navigator
+		barStyle={{
+			backgroundColor: '#fff',
+			shadowColor: '#000',
+			shadowOffset: { width: 0, height: 2 },
+			position: 'relative',
+			left: '15%',
+			bottom: 20,
+			width: '70%',
+			overflow: 'hidden',
+			borderRadius: 100,
+		}}
+	>
+		<Tab.Screen
+			options={{
+				tabBarIcon: () => <Ionicons name='home' size={24} color='#000' />,
+				tabBarLabel: '',
+			}}
+			name='Home'
+			component={Home}
+		/>
+		<Tab.Screen
+			options={{
+				tabBarIcon: () => (
+					<Ionicons name='notifications' size={24} color='#000' />
+				),
+				tabBarLabel: '',
+			}}
+			name='Notifications'
+			component={Profile}
+		/>
+		<Tab.Screen
+			options={{
+				tabBarIcon: () => (
+					<Ionicons name='md-add-circle' size={24} color='#000' />
+				),
+				tabBarLabel: '',
+			}}
+			name='Add'
+			component={Profile}
+		/>
+		<Tab.Screen
+			options={{
+				tabBarIcon: () => <Ionicons name='list' size={24} color='#000' />,
+				tabBarLabel: '',
+			}}
+			name='MyNfts'
+			component={Profile}
+		/>
+	</Tab.Navigator>
+);
